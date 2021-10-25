@@ -1,23 +1,12 @@
 import express from 'express';
 import cors from 'cors';
-import pg from 'pg';
 import {v4 as uuid} from 'uuid';
 import bcrypt from 'bcrypt';
-
+import connection from './database.js'
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-const {Pool} = pg;
-
-const connection = new Pool({
-    user: 'postgres',
-    password: '123456',
-    host: 'localhost',
-    port: 5432,
-    database: 'mywallet'
-});
 
 app.post("/signup", async (req,res)=>{
     const {
@@ -37,12 +26,11 @@ app.post("/signup", async (req,res)=>{
             return res.sendStatus(400);
             
         }
-        console.log(email);
         await connection.query(`
             INSERT INTO usuarios (nome, email, password) VALUES ($1, $2, $3);
         `, [nome, email, hash]);
 
-        return res.sendStatus(200);
+        res.sendStatus(200);
         
     } catch(error){
         console.log(error);
@@ -78,7 +66,7 @@ app.post("/signin", async (req,res)=>{
 
 app.get("/infos", async (req, res)=>{
     const token = req.headers.authorization?.replace('Bearer ', '');
-    console.log(token);
+    if(!token) return res.sendStatus(401);
     let soma = 0;
     try{
         const result = await connection.query(`SELECT * FROM sessoes JOIN infos ON sessoes.userid = infos.userid WHERE sessoes.token = $1;`, [token]);
@@ -130,5 +118,4 @@ app.delete("/signout", async (req, res)=>{
     }
 
 });
-
-app.listen(4000);
+export default app;
