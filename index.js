@@ -62,11 +62,12 @@ app.post("/signin", async (req,res)=>{
         console.log(user && bcrypt.compareSync(password, user.password));
         if(user && bcrypt.compareSync(password, user.password)){
             const token = uuid();
-            console.log();
+            const nome = user.nome;
+            
             await connection.query(`
             INSERT INTO sessoes (userid, token) VALUES ($1, $2);`,[user.id, token]
             );
-            res.send(token);
+            res.send({token, nome});
         } else{
             res.sendStatus(401);
         }
@@ -78,10 +79,18 @@ app.post("/signin", async (req,res)=>{
 app.get("/infos", async (req, res)=>{
     const token = req.headers.authorization?.replace('Bearer ', '');
     console.log(token);
+    let soma = 0;
     try{
         const result = await connection.query(`SELECT * FROM sessoes JOIN infos ON sessoes.userid = infos.userid WHERE sessoes.token = $1;`, [token]);
-
-        res.send(result.rows);
+        for(let i = 0; i < result.rowCount; i++){
+            console.log(result.rows[i].operacao);
+            if(result.rows[i].operacao === "entrada"){
+                soma += Number(result.rows[i].valor);
+            } else{
+                soma -= Number(result.rows[i].valor);
+            }
+        }
+        res.send({dados:result.rows, soma});
     }catch{
         res.sendStatus(500);
     }
@@ -91,7 +100,6 @@ app.post("/infos", async (req, res)=>{
 
     const {
         operacao,
-        dataoperacao,
         valor, 
         descricao
     } = req.body;
@@ -101,8 +109,8 @@ app.post("/infos", async (req, res)=>{
         const userid = result.rows[0].userid;
         console.log(userid);
         await connection.query(`
-            INSERT INTO infos (userid, operacao, dataoperacao, valor, descricao) VALUES ($1, $2, $3, $4, $5);
-        `, [userid, operacao, dataoperacao, valor, descricao]);
+            INSERT INTO infos (userid, operacao, dataoperacao, valor, descricao) VALUES ($1, $2, NOW(), $3, $4);
+        `, [userid, operacao, valor, descricao]);
         res.sendStatus(200);
     } catch{
         res.sendStatus(500);
