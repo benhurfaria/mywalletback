@@ -9,7 +9,7 @@ let databaseConfig = {
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
 };
-console.log(databaseConfig);
+
 if (process.env.NODE_ENV === "production") {
   databaseConfig = {
     connectionString: process.env.DATABASE_URL,
